@@ -1,31 +1,31 @@
 go-init-sentinel
 ================
 
-todo
+A minimal init system capable of watching files for changes and sending signals for reload, shutdown, etc.
+
+`go-init-sentinel` is intended as a wrapper for processes that need to be notified when a
+configuration file or TLS certificate is updated by an external process. For example, a wrapped
+nginx process can be sent a SIGHUP to reload configuration including TLS certificates.
+
+This can work in conjunction with a sidecar that is fetching secrets or certificates from
+an instance of Vault by trigger a process to reload that certificate.
+
+Suitable for use as pid-1 in a docker container. go-init-sentinel will forward signals to the
+child process.
+
+A simple `stat()`-based polling mechanism is used to detect file changes. The default interval
+is 10 seconds and may be customized via the `-interval` flag. `stat()` is used as the change
+detection method because experimentation showed that real-time notification interfaces such as
+inotify had a variety of edge cases and was dependent on the method in which files were updated.
+A simple "stat on interval" approach is simple, reliable, and works in a variety of cases including
+with kubernetes SecretVolume and ConfigMap mounts.
 
 Usage
 -----
 
-```sh
-/go-init-sentinel -signal=HUP -watch=/certs/cert.pem -- /my-service -p 8080
+Typical usage is via Docker entrypoint:
 
-# shutdown service with signal 15 TERM
-/go-init-sentinel -signal=TERM -watch=/certs/cert.pem -- /my-service -p 8080
-
-# multiple files - 1
-/go-init-sentinel -signal=HUP -watch=/certs/cert.pem,/certs/cert.key,/another/file -- /my-service -p 8080
-
-/go-init-sentinel -watch="/certs/cert.pem:1" -- /foo
-/go-init-sentinel -watch="/certs/cert.pem:HUP" -- /foo
-/go-init-sentinel -watch="/certs/cert.pem:HUP" -watch="/another/file:TERM" -- /foo
-/go-init-sentinel -watch="/certs/cert.pem:1" -watch="/another/file:15" -- /foo
-```
-
-questions:
-1. is it sufficient to send signals only to the direct child, or do we likely need to support sending the sig to all pids/children? maybe up to the other apps to manage their own children
-2. stat() or inotify based watch? plan for needing both
-3. 
-
+Watch a certificate for updates, send SIGHUP on change:
 
 ```dockerfile
 ...
@@ -33,50 +33,13 @@ ENTRYPOINT ["/go-init-sentinel", "-watch=/certs/stunnel.pem:SIGHUP", "--"]
 CMD ["/usr/bin/stunnel", "/config/stunnel.conf"]
 ```
 
+Watch multiple files:
 
-Notes
------
-
-### kubernetes secretVol updates
-
-inotify watches on kube secrets is difficult. Can't watch on the file itself, it's a symlink
-and it will be replaced
-
-```sh
-$ kubectl exec wormhole-client-ttc4h -- ls -l /joe-test
-drwxrwxrwt 3 root root  100 May 19 22:17 .
-drwxr-xr-x 1 root root 4096 May 19 22:15 ..
-drwxr-xr-x 2 root root   60 May 19 22:17 ..2019_05_19_22_17_34.047542780
-lrwxrwxrwx 1 root root   31 May 19 22:17 ..data -> ..2019_05_19_22_17_34.047542780
-lrwxrwxrwx 1 root root   10 May 19 22:15 foo -> ..data/foo
-
-$ kubectl edit secret joe-test
-$ date
-Sun May 19 14:56:04 PDT 2019
-
-2019/05/19 21:56:26 JOE: event: "/joe-test/..2019_05_19_21_56_26.122102519": CREATE
-2019/05/19 21:56:26 JOE: event: "/joe-test/..2019_05_19_21_56_26.122102519": CHMOD
-2019/05/19 21:56:26 JOE: event: "/joe-test/..data_tmp": RENAME
-2019/05/19 21:56:26 JOE: event: "/joe-test/..data": CREATE
-2019/05/19 21:56:26 JOE: event: "/joe-test/..2019_05_19_21_55_09.709462547": REMOVE
+```dockerfile
+...
+ENTRYPOINT ["/go-init-sentinel", "-watch=/etc/nginx/nginx.conf:SIGHUP", "-watch=/certs/tls.pem:SIGHUP", -""--"]
+CMD ["/usr/bin/nginx"]
 ```
 
-go reaper()
-
-for each sentinel,
-  start sentinel
-  add to sentinel-error-channels
-  add to sentinel-action-channels
-
-cmd.start
-for
-  select
-    signal channel:
-      if sigchld, ignore
-      else,
-        forward to child
-    sentinel-error-channels:
-      log error
-      shutdown
-    sentinel-action-channels:
-      send action (signal) to cmd.process.pid
+The `-watch` flag may be specified multiple tiems to watch multiple files. Each file
+change may send a different signal.
