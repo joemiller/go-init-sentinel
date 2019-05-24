@@ -1,0 +1,85 @@
+---
+project_name: go-init-sentinel
+builds:
+- binary: go-init-sentinel
+  env:
+    - CGO_ENABLED=0
+  # Default is `-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}`.
+  ldflags: -s -w -X main.version={{.Version}}+{{.ShortCommit}}
+  goos:
+    - linux
+    - darwin
+    - freebsd
+    - openbsd
+    - dragonfly
+    - netbsd
+  goarch:
+    - "386"
+    - amd64
+    - arm
+    - arm64
+  goarm:
+    - ''
+  ignore:
+    - goos: darwin
+      goarch: "386"
+
+archive:
+  replacements:
+    386: i386
+  format_overrides:
+  - goos: windows
+    format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - Merge pull request
+    - Merge branch
+
+dockers:
+  # primary docker image for amd64 arch
+  -
+    dockerfile: Dockerfile
+    binaries:
+     - go-init-sentinel
+    goos: linux
+    goarch: amd64
+    image_templates:
+     - "joemiller/go-init-sentinel:{{ .Tag }}"                  # v1.0.0
+     - "joemiller/go-init-sentinel:v{{ .Major }}"               # v1
+     - "joemiller/go-init-sentinel:v{{ .Major }}.{{ .Minor }}"  # v1.0
+     - "joemiller/go-init-sentinel:latest"
+  # build a docker image for arm64 arch
+  -
+    dockerfile: Dockerfile
+    binaries:
+     - go-init-sentinel
+    goos: linux
+    goarch: arm64
+    goarm: ''
+    image_templates:
+     - "joemiller/go-init-sentinel:{{ .Tag }}-arm64"                  # v1.0.0-arm64
+     - "joemiller/go-init-sentinel:v{{ .Major }}-arm64"               # v1-arm64
+     - "joemiller/go-init-sentinel:v{{ .Major }}.{{ .Minor }}-arm64"  # v1.0-arm64
+     - "joemiller/go-init-sentinel:latest-arm64"
+  # build a docker image for arm
+  -
+    dockerfile: Dockerfile
+    binaries:
+     - go-init-sentinel
+    goos: linux
+    goarch: arm
+    goarm: ''
+    image_templates:
+     - "joemiller/go-init-sentinel:{{ .Tag }}-arm"                  # v1.0.0-arm
+     - "joemiller/go-init-sentinel:v{{ .Major }}-arm"               # v1-arm
+     - "joemiller/go-init-sentinel:v{{ .Major }}.{{ .Minor }}-arm"  # v1.0-arm
+     - "joemiller/go-init-sentinel:latest-arm64"
