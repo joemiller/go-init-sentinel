@@ -58,6 +58,6 @@ change may send a different signal.
 
 ```dockerfile
 ...
-ENTRYPOINT ["/go-init-sentinel", "-watch=/etc/nginx/nginx.conf:SIGHUP", "-watch=/certs/tls.pem:SIGHUP", -""--"]
+ENTRYPOINT ["/go-init-sentinel", "-watch=/etc/nginx/nginx.conf:SIGHUP", "-watch=/certs/tls.pem:SIGHUP", "--"]
 CMD ["/usr/bin/nginx"]
 ```
