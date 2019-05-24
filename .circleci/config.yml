@@ -1,0 +1,106 @@
+---
+version: 2.1
+
+executors:
+  go-build:
+    docker:
+      - image: circleci/golang:1.12
+
+commands:
+  save-go-mod-cache:
+    steps:
+      - save_cache:
+          key: v4-dependencies-{{ checksum "go.mod" }}
+          paths:
+            - /go/pkg/mod
+
+  restore-go-mod-cache:
+    steps:
+      - restore_cache:
+          keys:
+            - v4-dependencies-{{ checksum "go.mod" }}
+
+  save-workspace:
+    steps:
+      - persist_to_workspace:
+          root: .
+          paths:
+            - ./
+
+  restore-workspace:
+    steps:
+      - attach_workspace:
+          at: .
+
+jobs:
+  deps:
+    executor: go-build
+    steps:
+      - checkout
+      - restore-go-mod-cache
+      # commands
+      - run: make deps
+      # persist
+      - save-go-mod-cache
+      - save-workspace
+
+  lint:
+    executor: go-build
+    steps:
+      - restore-workspace
+      - restore-go-mod-cache
+      # commands
+      - run: |
+          curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh \
+            | sh -s -- -b $(go env GOPATH)/bin v1.16.0
+
+      - run: make lint
+
+  test:
+    executor: go-build
+    steps:
+      - restore-workspace
+      - restore-go-mod-cache
+      # commands
+      - run: make test
+
+  release:
+    executor: go-build
+    steps:
+      - restore-workspace
+      - restore-go-mod-cache
+      - setup_remote_docker
+      # commands
+      - run: docker login -u $DOCKER_HUB_USER -p $DOCKER_HUB_PASSWD
+      - run: |
+          curl -s https://api.github.com/repos/pantheon-systems/autotag/releases/latest | \
+            grep browser_download | \
+            grep -i linux | \
+            cut -d '"' -f 4 | \
+            xargs curl -o ~/autotag -L \
+            && chmod 755 ~/autotag
+      - run: ~/autotag
+      - run: git reset --hard
+      - run: curl -sL https://git.io/goreleaser | bash -s -- --parallelism=4
+      # goreleaser install script runs goreleaser automatically
+
+workflows:
+  version: 2
+  primary:
+    jobs:
+      - deps
+      - lint:
+          requires:
+            - deps
+      - test:
+          requires:
+            - deps
+      - release:
+          requires:
+            - lint
+            - test
+          filters:
+            branches:
+              only:
+                - master
+                - test-release
