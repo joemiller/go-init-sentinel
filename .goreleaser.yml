@@ -1,0 +1,109 @@
+---
+project_name: go-init-sentinel
+builds:
+- binary: go-init-sentinel
+  env:
+    - CGO_ENABLED=0
+  # Default is `-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}`.
+  ldflags: -s -w -X main.version={{.Version}}+{{.ShortCommit}}
+  goos:
+    - linux
+    - darwin
+    - freebsd
+    - openbsd
+    - dragonfly
+    - netbsd
+  goarch:
+    - "386"
+    - amd64
+    - arm
+    - arm64
+  goarm:
+    - ''
+  ignore:
+    - goos: darwin
+      goarch: "386"
+
+archive:
+  replacements:
+    386: i386
+  format_overrides:
+  - goos: windows
+    format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - Merge pull request
+    - Merge branch
+
+# dockers:
+#   # primary docker image for amd64 arch
+#   -
+#     dockerfile: Dockerfile
+#     binaries:
+#      - pants
+#     goos: linux
+#     goarch: amd64
+#     image_templates:
+#      - "quay.io/getpantheon/pants:{{ .Tag }}"                  # v1.0.0
+#      - "quay.io/getpantheon/pants:v{{ .Major }}"               # v1
+#      - "quay.io/getpantheon/pants:v{{ .Major }}.{{ .Minor }}"  # v1.0
+#      - "quay.io/getpantheon/pants:latest"
+#   # build a docker image for arm64 arch
+#   -
+#     dockerfile: Dockerfile
+#     binaries:
+#      - pants
+#     goos: linux
+#     goarch: arm64
+#     goarm: ''
+#     image_templates:
+#      - "quay.io/getpantheon/pants:{{ .Tag }}-arm64"                  # v1.0.0-arm64
+#      - "quay.io/getpantheon/pants:v{{ .Major }}-arm64"               # v1-arm64
+#      - "quay.io/getpantheon/pants:v{{ .Major }}.{{ .Minor }}-arm64"  # v1.0-arm64
+#      - "quay.io/getpantheon/pants:latest-arm64"
+#   # build a docker image for arm
+#   -
+#     dockerfile: Dockerfile
+#     binaries:
+#      - pants
+#     goos: linux
+#     goarch: arm
+#     goarm: ''
+#     image_templates:
+#      - "quay.io/getpantheon/pants:{{ .Tag }}-arm"                  # v1.0.0-arm
+#      - "quay.io/getpantheon/pants:v{{ .Major }}-arm"               # v1-arm
+#      - "quay.io/getpantheon/pants:v{{ .Major }}.{{ .Minor }}-arm"  # v1.0-arm
+#      - "quay.io/getpantheon/pants:latest-arm64"
+
+# ## generate RPM and DEB packages
+# nfpm:
+#   vendor: "Pantheon Systems, Inc."
+#   homepage: "https://github.com/pantheon-systems/pants"
+#   maintainer: "infrastructure@pantheon.io"
+#   description: "Pantheon's Kubernetes Environment Tool"
+#   license: Apache
+#   formats:
+#     - deb
+#     - rpm
+#   overrides:
+#     rpm:
+#       name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
+#       replacements:
+#         amd64: x86_64
+#         386: i686
+#         arm: armhfp
+#         arm64: aarch64
+#     deb:
+#       name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+#       replacements:
+#         386: i386
+#         arm: armel
