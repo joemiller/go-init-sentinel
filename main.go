@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -22,6 +23,7 @@ var (
 	debug   = false
 	version = "development"
 
+	splay                         = false
 	interval        time.Duration = 10 * time.Second
 	shutdownTimeout time.Duration = 30 * time.Second
 )
@@ -51,6 +53,8 @@ func initLogger() *logging.Logger {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	log = initLogger()
 
 	var showVersion bool
@@ -59,6 +63,7 @@ func main() {
 	flag.Var(&watches, "watch", "File watch rule, ex: -watch=\"/path/to/file:SIGNAME\". Can be specified multiple times.")
 	flag.BoolVar(&showVersion, "version", false, "Display go-init-sentinel version")
 	flag.BoolVar(&debug, "debug", false, "Display debug log messages")
+	flag.BoolVar(&splay, "splay", false, "Add a random value to the check interval, between 0 - <interval>")
 	flag.DurationVar(&interval, "interval", interval, "Interval to check files for changes.")
 	flag.DurationVar(&shutdownTimeout, "stop-timeout", shutdownTimeout,
 		"Grace period for the child process to shutdown before killing with SIGKILL")
@@ -73,9 +78,16 @@ func main() {
 		logging.SetLevel(logging.DEBUG, "")
 	}
 
+	if splay {
+		extra := rand.Intn(int(interval.Seconds()))
+		interval = interval + time.Duration(extra)*time.Second
+		log.Debugf("splaying enabled, new interval: %s", interval)
+	}
+
 	if len(watches) == 0 {
 		log.Fatal("No -watch flags specified")
 	}
+
 	// TODO: customize help message to show passing a main command
 
 	if flag.NArg() == 0 {
