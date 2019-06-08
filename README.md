@@ -22,7 +22,7 @@ is 10 seconds and may be customized via the `-interval` flag. `stat()` is used a
 detection method because experimentation showed that real-time notification interfaces such as
 inotify had a variety of edge cases and was dependent on the method in which files were updated.
 A simple "stat on interval" approach is simple, reliable, and works in a variety of cases including
-with kubernetes SecretVolume and ConfigMap mounts.
+with Kubernetes SecretVolume and ConfigMap mounts.
 
 Install
 -------
@@ -58,6 +58,14 @@ change may send a different signal.
 
 ```dockerfile
 ...
-ENTRYPOINT ["/go-init-sentinel", "-watch=/etc/nginx/nginx.conf:SIGHUP", "-watch=/certs/tls.pem:SIGHUP", "--"]
+ENTRYPOINT ["/go-init-sentinel",
+            "-watch=/etc/nginx/nginx.conf:SIGHUP",
+            "-watch=/certs/tls.pem:SIGHUP",
+            "--"]
 CMD ["/usr/bin/nginx"]
 ```
+
+A random amount of time can be added to the check interval by adding the `-splay` flag.
+This can be useful if you have many instances (pods) where the reload operation may be slow
+and you want to avoid all instances being unavailable at the same time. The splay time added to
+the interval will be between "0-<interval>" seconds.
