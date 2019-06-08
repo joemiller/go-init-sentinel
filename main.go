@@ -73,6 +73,9 @@ func main() {
 		logging.SetLevel(logging.DEBUG, "")
 	}
 
+	if len(watches) == 0 {
+		log.Fatal("No -watch flags specified")
+	}
 	// TODO: customize help message to show passing a main command
 
 	if flag.NArg() == 0 {
