@@ -68,4 +68,4 @@ CMD ["/usr/bin/nginx"]
 A random amount of time can be added to the check interval by adding the `-splay` flag.
 This can be useful if you have many instances (pods) where the reload operation may be slow
 and you want to avoid all instances being unavailable at the same time. The splay time added to
-the interval will be between "0-<interval>" seconds.
+the interval will be between `"0-<interval>"` seconds.
